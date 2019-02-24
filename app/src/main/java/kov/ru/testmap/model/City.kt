@@ -4,8 +4,9 @@ import android.arch.persistence.room.Entity
 import android.arch.persistence.room.PrimaryKey
 
 @Entity
-data class City(val city: String,
+data class City(@PrimaryKey val city: String,
                 val country: String,
-                @PrimaryKey val key: String,
                 val latitude: Double,
-                val longitude: Double)
+                val longitude: Double,
+                var weather: String,
+                var description: String)

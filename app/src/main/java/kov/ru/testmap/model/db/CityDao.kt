@@ -9,8 +9,8 @@ interface CityDao {
     @Query ("SELECT * FROM city")
     fun getAll(): List<City>
 
-    @Query ("SELECT * FROM city WHERE key = :key")
-    fun get(key: Long): City
+    @Query ("SELECT * FROM city WHERE city = :city")
+    fun get(city: String): City
 
     @Insert
     fun insert(city: City)

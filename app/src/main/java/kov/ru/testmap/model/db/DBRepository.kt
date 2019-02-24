@@ -1,13 +1,15 @@
 package kov.ru.testmap.model.db
 
+import android.database.sqlite.SQLiteConstraintException
 import kov.ru.testmap.App
 import kov.ru.testmap.model.City
 import kov.ru.testmap.view.Main
 
 class DBRepository private constructor() : Main.DBRepository {
 
-    val cityDAO: CityDao = App.appDB.cityDAO
-    var arrayListeners: ArrayList<DBListener> = ArrayList()
+    private val cityDAO: CityDao = App.appDB.cityDAO
+    //подписка на изменения в репозитории
+    private val listeners: ArrayList<DBListener> = ArrayList()
 
     companion object {
         private var instance: DBRepository = DBRepository()
@@ -15,46 +17,69 @@ class DBRepository private constructor() : Main.DBRepository {
     }
 
     override fun addListener(listener: DBListener) {
-        arrayListeners.add(listener)
+        listeners.add(listener)
     }
 
-    override fun add(city: City) {
+    override fun add(city: City, listener: DBListenerAdd?) {
         Thread {
-            cityDAO.insert(city)
-            for (listener: DBListener in arrayListeners)
-                listener.added(city)
+            try {
+                cityDAO.insert(city)
+                listener?.cityAdded(city)
+                for (listener: DBListener in listeners)
+                    if (listener is DBListenerAdd)
+                        listener.cityAdded(city)
+            } catch (e: SQLiteConstraintException) {
+
+            }
         }.start()
     }
 
-    override fun get(key: Long) {
+    override fun get(location: String, listener: DBListenerGet?) {
         Thread {
-            val city: City = cityDAO.get(key)
-            for (listener: DBListener in arrayListeners)
-                listener.returnOne(city)
+            val city: City = cityDAO.get(location)
+            listener?.returnCity(city)
+            for (listener: DBListener in listeners)
+                if (listener is DBListenerGet)
+                    listener.returnCity(city)
         }.start()
     }
 
-    override fun getAll() {
+    override fun getAll(listener: DBListenerGetAll?) {
         Thread {
             var cities: ArrayList<City> = ArrayList()
             cities = cityDAO.getAll() as ArrayList<City>
-            for (listener: DBListener in arrayListeners)
-                listener.returnAll(cities)
+            listener?.returnCities(cities)
+            for (listener: DBListener in listeners)
+                if (listener is DBListenerGetAll)
+                    listener.returnCities(cities)
         }.start()
     }
 
-    override fun delete(city: City) {
+    override fun delete(city: City, listener: DBListenerDelete?) {
         Thread {
             cityDAO.delete(city)
-            for (listener: DBListener in arrayListeners)
-                listener.deleted(city)
+            listener?.cityDeleted(city)
+            for (listener: DBListener in listeners)
+                if (listener is DBListenerDelete)
+                    listener.cityDeleted(city)
         }.start()
     }
 }
 
-interface DBListener {
-    fun added(city: City)
-    fun returnAll(cities: ArrayList<City>)
-    fun returnOne(city: City)
-    fun deleted(city: City)
+interface DBListener {}
+
+interface DBListenerGet : DBListener {
+    fun returnCity(city: City)
+}
+
+interface DBListenerGetAll : DBListener {
+    fun returnCities(cities: ArrayList<City>)
+}
+
+interface DBListenerAdd : DBListener {
+    fun cityAdded(city: City)
+}
+
+interface DBListenerDelete : DBListener {
+    fun cityDeleted(city: City)
 }
